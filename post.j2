@@ -1,0 +1,22 @@
+#/bin/sh
+ 
+# remove LVM hack
+ 
+# setup sudoers
+cat << 'SUDOERS' > /target/etc/sudoers2;
+Defaults env_reset
+Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$"
+ 
+%{{ admin_user }}    ALL= NOPASSWD: ALL
+ 
+SUDOERS
+ 
+# setup SSH key & authorized_keys
+mkdir -p /target/home/{{ admin_user }}/.ssh
+/target/usr/bin/ssh-keygen -f /target/home/{{ admin_user }}/.ssh/id_rsa -C 'bad wolf' -N '' -t rsa -q
+ 
+# not sure why we have quotes around this key, fix it
+cat << 'PUBKEY' | cut -c 1- | cut -b 2- > /target/home/{{ admin_user }}/.ssh/authorized_keys
+{{ ansible_pubkey }} PUBKEY
+ 
+true

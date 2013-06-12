@@ -1,0 +1,102 @@
+d-i mirror/country string manual
+d-i mirror/http/hostname string us.archive.ubuntu.com
+d-i mirror/http/directory string /ubuntu
+d-i mirror/http/proxy string {{ cobbler_proxy }}
+d-i partman/early_command string vgs --separator=: --noheadings | cut -f1 -d: | while read vg ; do vgchange -an $vg ; done ; pvs --separator=: --noheadings | cut -f1 -d: | while read pv ; do pvremove -ff -y $pv ; done
+d-i partman-auto/disk string {% for element in diskpart %}{{ element }} {% endfor %}
+d-i partman/alignment string cylinder
+d-i partman-md/device_remove_md boolean true
+d-i partman-md/confirm boolean true
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman/choose_partition select Finish
+d-i partman/confirm_write_new_label boolean true
+{% if expert_disk %}
+d-i partman-auto/method string lvm
+d-i partman-basicfilesystems/choose_label string gpt
+d-i partman-basicfilesystems/default_label string gpt
+d-i partman-partitioning/choose_label string gpt
+d-i partman-partitioning/default_label string gpt
+d-i partman/choose_label string gpt
+d-i partman/default_label string gpt
+d-i partman-auto/choose_recipe select openstack
+d-i partman-auto/expert_recipe string           \
+openstack ::                                    \
+1 1 1 free                                      \
+        $gptonly{ }                             \
+        $primary{ }                             \
+        $bios_boot{ }                           \
+        method{ biosgrub }                      \
+.                                               \
+200 200 200 ext3                                \
+        $gptonly{ }                             \
+        $primary{ }                             \
+        device{ {{ boot_disk }} }              \
+        method{ format } format{ }              \
+        use_filesystem{ } filesystem{ ext3 }    \
+        mountpoint{ /boot }                     \
+.                                               \
+{% for element in diskpart %}20480 1000000 1000000000 ext4                        \
+        $defaultignore{ }                       \
+        $gptonly{ }                             \
+        $primary{ }                             \
+        method{ lvm }                           \
+        device{ {{ element }} }                \
+        vg_name{ nova-volumes }                 \
+.                                               \
+{% endfor %}
+10240 10240 10240 ext4                          \
+        $lvmok{ }                               \
+        method{ format } format{ }              \
+        use_filesystem{ } filesystem{ ext4 }    \
+        mountpoint{ / }                         \
+        in_vg{ nova-volumes }                   \
+        lv_name{ slash }                        \
+.                                               \
+4098 512 4098 linux-swap                        \
+        $lvmok{ }                               \
+        method{ swap } format{ }                \
+        in_vg{ nova-volumes }                   \
+        lv_name{ swap }                         \
+.                                               \
+10240 10240 102400 ext4                         \
+        $lvmok{ }                               \
+        method{ format } format{ }              \
+        use_filesystem{ } filesystem{ ext4 }    \
+        mountpoint{ /var }                      \
+        in_vg{ nova-volumes }                   \
+        lv_name{ var }                          \
+.                                               \
+10240 10240 102400 ext4                         \
+        $lvmok{ }                               \
+        mountpoint{ /tmp/hack }                 \
+        in_vg{ nova-volumes }                   \
+        lv_name{ hack }                         \
+.
+{% else %}
+d-i partman-auto/method string regular
+d-i partman-auto/choose_recipe select atomic
+{% endif %}
+d-i partman/choose_partition        select Finish partitioning and write changes to disk
+d-i partman-md/confirm_nooverwrite boolean true
+d-i partman-md/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select Finish
+d-i partman/confirm_nooverwrite boolean true
+d-i partman/confirm boolean true
+d-i clock-setup/utc boolean true
+{% if ntp_server %}d-i clock-setup/ntp boolean true
+d-i clock-setup/ntp-server string {{ ntp_server }}{% endif %}
+d-i time/zone string UTC
+d-i passwd/user-fullname string Admin Adminson
+d-i passwd/username string {{ admin_user }}
+d-i passwd/user-password-crypted password {{ password_crypted }}
+d-i user-setup/encrypt-home boolean false
+d-i grub-installer/only_debian boolean true
+d-i finish-install/reboot_in_progress note
+d-i pkgsel/update-policy select none
+d-i pkgsel/include string {{ packages }}
+d-i preseed/early_command string http_proxy="" wget -O /dev/null http://$http_server:$http_port/cblr/svc/op/trig/mode/pre/system/$system_name;
+d-i preseed/late_command string /sbin/lvremove -f nova-volumes/hack; http_proxy="" wget -O /dev/null http://$http_server:$http_port/cblr/svc/op/nopxe/system/$system_name; http_proxy="" wget -q -O - http://$http_server:$http_port/post.sh | sh; {{late_command }}; true
