@@ -10,26 +10,26 @@
     - restart apache2
  
 - name: preseed setup
-  template: src=./cobbler/templates/preseed.j2 dest=/etc/cobbler/preseeds/cisco-preseed
+  template: src=templates/preseed.j2 dest=/etc/cobbler/preseeds/cisco-preseed
  
 - name: apt-cacher-ng config
-  template: src=./cobbler/templates/acng.j2 dest=/etc/apt-cacher-ng/acng.conf
+  template: src=templates/acng.j2 dest=/etc/apt-cacher-ng/acng.conf
   notify:
     - restart apt-cacher-ng
  
 - name: cobbler settings
-  template: src=./cobbler/templates/settings.j2 dest=/etc/cobbler/settings
+  template: src=templates/settings.j2 dest=/etc/cobbler/settings
   notify:
      - restart cobbler
  
 - name: cobbler modules.conf
-  template: src=./cobbler/templates/modules.conf.j2 dest=/etc/cobbler/modules.conf
+  template: src=templates/modules.conf.j2 dest=/etc/cobbler/modules.conf
   notify:
      - restart cobbler
  
 # TODO: ISC/bind combo not done here yet.  Skipping for now.
 - name: cobbler dnsmasq template
-  template: src=./cobbler/templates/dnsmasq.template.j2 dest=/etc/cobbler/dnsmasq.template
+  template: src=templates/dnsmasq.template.j2 dest=/etc/cobbler/dnsmasq.template
   notify:
      - restart cobbler
  
@@ -45,10 +45,10 @@
 # we could use the current user here, just assume administrator for now
  
 - name: make my remote sudoers config web accessible (preseed hack)
-  template: src=./cobbler/templates/sudoers.j2 dest=/var/www/sudoers
+  template: src=templates/sudoers.j2 dest=/var/www/sudoers
  
 - name: set up post script for the preseed
-  template: src=./cobbler/templates/post.j2 dest=/var/www/post.sh
+  template: src=templates/post.j2 dest=/var/www/post.sh
  
 # NOTE: you are expected to manage the setup of your cobbler distros and systems on
 # your own for now.  Resource may wrap these later.
