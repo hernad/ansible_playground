@@ -1,15 +1,19 @@
 ---
 - hosts: all
   sudo: yes
+  vars:
+  - dns_ip_start: 192.168.33.100 
+  - dns_ip_end: 192.168.33.150
+
   tasks:
   - name: cobbler installation
-    action:  apt name={{ item }} state=present
+    action:  apt name={{ item }} state=present update_cache=yes
     with_items: [ "dnsmasq",  "tftpd-hpa", "cobbler", "apt-cacher-ng" ]
     notify:
        - restart apache2
  
   - name: preseed setup
-    template: src=templates/preseed.j2 dest=/etc/cobbler/preseeds/cisco-preseed
+    template: src=templates/preseed.j2 dest=/var/lib/cobbler/ubuntu-1.seed
  
   - name: apt-cacher-ng config
     template: src=templates/acng.j2 dest=/etc/apt-cacher-ng/acng.conf
@@ -47,6 +51,16 @@
  
   - name: set up post script for the preseed
     template: src=templates/post.j2 dest=/var/www/post.sh
+
+
+  handlers:
+    - name: restart cobbler
+      action: service name=cobbler state=restarted
+
+    - name: restart apt-cacher-ng
+      action: service name=apt-cacher-ng state=restarted
+
+
  
 # NOTE: you are expected to manage the setup of your cobbler distros and systems on
 # your own for now.  Resource may wrap these later.
