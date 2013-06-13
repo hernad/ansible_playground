@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: cobbler
   sudo: yes
   vars:
   - dns_ip_start: 192.168.33.100 
@@ -46,14 +46,19 @@
     service: name=apt-cacher-ng state=running enabled=yes
  
   # we could use the current user here, just assume administrator for now
-  - name: make my remote sudoers config web accessible (preseed hack)
-    template: src=templates/sudoers.j2 dest=/var/www/sudoers
+  #- name: make my remote sudoers config web accessible (preseed hack)
+  #  template: src=templates/sudoers.j2 dest=/var/www/sudoers
  
   - name: set up post script for the preseed
     template: src=templates/post.j2 dest=/var/www/post.sh
 
 
   handlers:
+
+    - name: restart apache2
+      action: service name=apache2 state=restarted
+
+
     - name: restart cobbler
       action: service name=cobbler state=restarted
 
