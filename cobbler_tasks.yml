@@ -1,54 +1,52 @@
 ---
-- name: cobbler installation
-  apt: name=$item state=present
-  with_items:
-    - dnsmasq
-    - tftpd-hpa
-    - cobbler
-    - apt-cacher-ng
-  notify:
-    - restart apache2
+- hosts: all
+  sudo: yes
+  tasks:
+  - name: cobbler installation
+    action:  apt name={{ item }} state=present
+    with_items: [ "dnsmasq",  "tftpd-hpa", "cobbler", "apt-cacher-ng" ]
+    notify:
+       - restart apache2
  
-- name: preseed setup
-  template: src=templates/preseed.j2 dest=/etc/cobbler/preseeds/cisco-preseed
+  - name: preseed setup
+    template: src=templates/preseed.j2 dest=/etc/cobbler/preseeds/cisco-preseed
  
-- name: apt-cacher-ng config
-  template: src=templates/acng.j2 dest=/etc/apt-cacher-ng/acng.conf
-  notify:
+  - name: apt-cacher-ng config
+    template: src=templates/acng.j2 dest=/etc/apt-cacher-ng/acng.conf
+    notify:
     - restart apt-cacher-ng
  
-- name: cobbler settings
-  template: src=templates/settings.j2 dest=/etc/cobbler/settings
-  notify:
+  - name: cobbler settings
+    template: src=templates/settings.j2 dest=/etc/cobbler/settings
+    notify:
+    - restart cobbler
+ 
+  - name: cobbler modules.conf
+    template: src=templates/modules.conf.j2 dest=/etc/cobbler/modules.conf
+    notify:
+    - restart cobbler
+ 
+  # TODO: ISC/bind combo not done here yet.  Skipping for now.
+  - name: cobbler dnsmasq template
+    template: src=templates/dnsmasq.template.j2 dest=/etc/cobbler/dnsmasq.template
+    notify:
      - restart cobbler
  
-- name: cobbler modules.conf
-  template: src=templates/modules.conf.j2 dest=/etc/cobbler/modules.conf
-  notify:
-     - restart cobbler
+  - name: ensure cobbler is running
+    service: name=cobbler state=running enabled=yes
  
-# TODO: ISC/bind combo not done here yet.  Skipping for now.
-- name: cobbler dnsmasq template
-  template: src=templates/dnsmasq.template.j2 dest=/etc/cobbler/dnsmasq.template
-  notify:
-     - restart cobbler
+  - name: ensure apache is running
+    service: name=apache2 state=running enabled=yes
  
-- name: ensure cobbler is running
-  service: name=cobbler state=running enabled=yes
+  - name: ensure apt-cacher-ng is running
+    service: name=apt-cacher-ng state=running enabled=yes
  
-- name: ensure apache is running
-  service: name=apache2 state=running enabled=yes
+  # we could use the current user here, just assume administrator for now
+  - name: make my remote sudoers config web accessible (preseed hack)
+    template: src=templates/sudoers.j2 dest=/var/www/sudoers
  
-- name: ensure apt-cacher-ng is running
-  service: name=apt-cacher-ng state=running enabled=yes
- 
-# we could use the current user here, just assume administrator for now
- 
-- name: make my remote sudoers config web accessible (preseed hack)
-  template: src=templates/sudoers.j2 dest=/var/www/sudoers
- 
-- name: set up post script for the preseed
-  template: src=templates/post.j2 dest=/var/www/post.sh
+  - name: set up post script for the preseed
+    template: src=templates/post.j2 dest=/var/www/post.sh
  
 # NOTE: you are expected to manage the setup of your cobbler distros and systems on
 # your own for now.  Resource may wrap these later.
